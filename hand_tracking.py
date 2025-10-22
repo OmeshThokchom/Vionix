@@ -1,23 +1,23 @@
 
 import cv2
-import mediapipe as mp
+import time
+from index_finger_reader import IndexFingerReader
 
-# Initialize MediaPipe Hands
-mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(
-    static_image_mode=False,
-    max_num_hands=2,
-    min_detection_confidence=0.5,
-    min_tracking_confidence=0.5
-)
-mp_drawing = mp.solutions.drawing_utils
+# Initialize IndexFingerReader
+index_reader = IndexFingerReader()
 
 # Open webcam
 cap = cv2.VideoCapture(0)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
 if not cap.isOpened():
     print("Error: Could not open video stream.")
     exit()
+
+# For FPS calculation
+prev_frame_time = 0
+new_frame_time = 0
 
 while cap.isOpened():
     ret, frame = cap.read()
@@ -25,17 +25,22 @@ while cap.isOpened():
         break
 
     # Flip the frame horizontally for a later selfie-view display
-    # Also convert the BGR image to RGB.
     frame = cv2.flip(frame, 1)
-    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    # Process the frame with MediaPipe Hands
-    results = hands.process(rgb_frame)
+    # Get index finger tip coordinates using the new class
+    index_tip_coords = index_reader.get_index_finger_tip(frame)
 
-    # Draw hand landmarks
-    if results.multi_hand_landmarks:
-        for hand_landmarks in results.multi_hand_landmarks:
-            mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+    if index_tip_coords:
+        cx, cy, cz = index_tip_coords
+        # Draw a circle at the index finger tip position
+        cv2.circle(frame, (cx, cy), 10, (255, 0, 255), cv2.FILLED)
+
+    # Calculate and display FPS
+    new_frame_time = time.time()
+    fps = 1 / (new_frame_time - prev_frame_time)
+    prev_frame_time = new_frame_time
+    fps_text = f"FPS: {int(fps)}"
+    cv2.putText(frame, fps_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
 
     # Display the frame
     cv2.imshow('Hand Tracking', frame)
@@ -45,6 +50,6 @@ while cap.isOpened():
         break
 
 # Release resources
-hands.close()
+index_reader.close()
 cap.release()
 cv2.destroyAllWindows()
