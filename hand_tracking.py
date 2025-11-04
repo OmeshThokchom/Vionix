@@ -6,7 +6,6 @@ from index_finger_reader import IndexFingerReader
 # Initialize IndexFingerReader
 index_reader = IndexFingerReader()
 
-
 # Open webcam
 cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
